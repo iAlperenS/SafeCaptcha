@@ -141,6 +141,6 @@ MIT License
 
 ---
 
-Made with ❤️ by iAlperenS & cagatay_seper
+Made with ❤️ by iAlperenS & cagatay36seper
 ---
 Contact: alperendevv@gmail.com
