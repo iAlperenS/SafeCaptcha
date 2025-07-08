@@ -45,7 +45,7 @@ A production-ready, modular CAPTCHA verification system built with Flask. This p
 ```bash
 project/
 ├── app/
-│ ├── init.py # App Factory
+│ ├── __init__.py # App Factory
 │ ├── config.py # Environment configs
 │ ├── captcha/
 │ │ ├── apocaptcha.py # Captcha logic
