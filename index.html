@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Captcha Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+    #captchaImg { display: block; margin-bottom: 10px; max-width: 100%; height: auto; }
+    #result { margin-top: 10px; font-weight: bold; min-height: 1.2em; }
+    input, button { padding: 8px; font-size: 1em; }
+    input { width: 70%; margin-right: 5px; }
+  </style>
+</head>
+<body>
+  <h2>Captcha Doğrulama</h2>
+  <img id="captchaImg" alt="Captcha" />
+  <br />
+  <input type="text" id="captchaInput" placeholder="Captcha cevabını yazın" autocomplete="off" />
+  <button id="verifyBtn">Doğrula</button>
+  <div id="result"></div>
+
+<script>
+  const API_URL = 'http://127.0.0.1:5000'; // API adresini kendi sunucuna göre değiştir
+
+  let currentCaptchaId = null;
+  let currentCaptchaSignature = null;
+
+  async function loadCaptcha() {
+    const res = await fetch(`${API_URL}/api/v1/captcha`);
+    if (!res.ok) throw new Error('Captcha alınamadı: ' + res.status);
+    return res.json();
+  }
+
+  function showCaptcha(base64img) {
+    const imgEl = document.getElementById('captchaImg');
+    imgEl.src = base64img;
+  }
+
+  async function verifyCaptcha(id, signature, answer) {
+    const res = await fetch(`${API_URL}/api/v1/verify`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ id, signature, answer })
+    });
+    if (!res.ok) throw new Error('Doğrulama başarısız: ' + res.status);
+    return res.json();
+  }
+
+  async function refreshCaptcha() {
+    try {
+      const res = await fetch(`${API_URL}/api/v1/captcha/refresh`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ id: currentCaptchaId, signature: currentCaptchaSignature })
+      });
+      if (!res.ok) throw new Error('Yenileme başarısız: ' + res.status);
+      const data = await res.json();
+      currentCaptchaId = data.id;
+      currentCaptchaSignature = data.signature;
+      showCaptcha(data.captcha_img);
+      document.getElementById('captchaInput').value = '';
+      document.getElementById('result').textContent = '';
+      document.getElementById('captchaInput').focus();
+    } catch (e) {
+      document.getElementById('result').textContent = 'Captcha yüklenirken hata: ' + e.message;
+    }
+  }
+
+  document.getElementById('verifyBtn').addEventListener('click', async () => {
+    const answer = document.getElementById('captchaInput').value.trim();
+    if (!answer) {
+      alert('Lütfen captcha cevabını girin!');
+      return;
+    }
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.textContent = 'Doğrulanıyor...';
+
+    try {
+      const verifyRes = await verifyCaptcha(currentCaptchaId, currentCaptchaSignature, answer);
+      if (verifyRes.success) {
+        resultDiv.textContent = '✅ Doğru cevap! Captcha doğrulandı.';
+      } else {
+        resultDiv.textContent = '❌ Hatalı cevap: ' + (verifyRes.error || 'Bilinmeyen hata');
+        await refreshCaptcha();
+      }
+    } catch (e) {
+      resultDiv.textContent = 'Doğrulama hatası: ' + e.message;
+    }
+  });
+
+  // Sayfa yüklendiğinde captcha yükle
+  window.addEventListener('load', async () => {
+    try {
+      const data = await loadCaptcha();
+      currentCaptchaId = data.id;
+      currentCaptchaSignature = data.signature;
+      showCaptcha(data.captcha_img);
+    } catch (e) {
+      document.getElementById('result').textContent = 'Captcha yüklenemedi: ' + e.message;
+    }
+  });
+</script>
+</body>
+</html>
